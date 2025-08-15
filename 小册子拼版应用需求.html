@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小册子拼版设计工具</title>
+    <script src="https://cdn.tailwindcss.com/3.3.3"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #f5f7fa;
+        }
+        .booklet-preview {
+            width: 210mm;
+            height: 140mm;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .booklet-preview.portrait {
+            width: 140mm;
+            height: 210mm;
+        }
+        .booklet-fold {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 2px;
+            height: 100%;
+            background: repeating-linear-gradient(
+                to bottom,
+                #000,
+                #000 10px,
+                transparent 10px,
+                transparent 20px
+            );
+            z-index: 10;
+        }
+        .template-thumbnail {
+            width: 120px;
+            height: 80px;
+            border: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+        .template-thumbnail:hover {
+            transform: scale(1.05);
+        }
+        .template-thumbnail.active {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+        }
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .booklet-preview, .booklet-preview * {
+                visibility: visible;
+            }
+            .booklet-preview {
+                position: absolute;
+                left: 0;
+                top: 0;
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="container mx-auto py-8 px-4">
+        <h1 class="text-3xl font-bold text-center mb-8 text-gray-800">小册子拼版设计工具</h1>
+        
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- 左侧控制面板 -->
+            <div class="w-full lg:w-1/4 bg-white rounded-xl shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700">模板选择</h2>
+                
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="template-item cursor-pointer" data-template="product">
+                        <div class="template-thumbnail bg-gradient-to-r from-blue-100 to-blue-200 rounded-md flex items-center justify-center">
+                            <i class="fas fa-box-open text-blue-500 text-2xl"></i>
+                        </div>
+                        <p class="text-sm text-center mt-2 text-gray-600">产品宣传</p>
+                    </div>
+                    <div class="template-item cursor-pointer" data-template="event">
+                        <div class="template-thumbnail bg-gradient-to-r from-purple-100 to-purple-200 rounded-md flex items-center justify-center">
+                            <i class="fas fa-calendar-alt text-purple-500 text-2xl"></i>
+                        </div>
+                        <p class="text-sm text-center mt-2 text-gray-600">活动手册</p>
+                    </div>
+                    <div class="template-item cursor-pointer" data-template="company">
+                        <div class="template-thumbnail bg-gradient-to-r from-green-100 to-green-200 rounded-md flex items-center justify-center">
+                            <i class="fas fa-building text-green-500 text-2xl"></i>
+                        </div>
+                        <p class="text-sm text-center mt-2 text-gray-600">企业介绍</p>
+                    </div>
+                    <div class="template-item cursor-pointer" data-template="education">
+                        <div class="template-thumbnail bg-gradient-to-r from-yellow-100 to-yellow-200 rounded-md flex items-center justify-center">
+                            <i class="fas fa-graduation-cap text-yellow-500 text-2xl"></i>
+                        </div>
+                        <p class="text-sm text-center mt-2 text-gray-600">教育资料</p>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-700">排版设置</h2>
+                    <div class="flex items-center justify-between bg-gray-100 rounded-lg p-3">
+                        <span class="text-gray-700">方向：</span>
+                        <div class="flex space-x-2">
+                            <button id="landscapeBtn" class="px-4 py-2 bg-blue-500 text-white rounded-md flex items-center">
+                                <i class="fas fa-arrows-alt-h mr-2"></i>横版
+                            </button>
+                            <button id="portraitBtn" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md flex items-center">
+                                <i class="fas fa-arrows-alt-v mr-2"></i>竖版
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-700">折叠预览</h2>
+                    <label class="flex items-center space-x-3 cursor-pointer">
+                        <div class="relative">
+                            <input type="checkbox" id="foldToggle" class="sr-only" checked>
+                            <div class="block bg-gray-300 w-14 h-8 rounded-full"></div>
+                            <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition"></div>
+                        </div>
+                        <span class="text-gray-700">显示折叠线</span>
+                    </label>
+                </div>
+                
+                <button id="printBtn" class="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium flex items-center justify-center transition">
+                    <i class="fas fa-print mr-2"></i>打印设计
+                </button>
+            </div>
+            
+            <!-- 右侧预览区域 -->
+            <div class="w-full lg:w-3/4">
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold text-gray-700">设计预览</h2>
+                        <div class="text-sm text-gray-500">
+                            <span id="sizeDisplay">210mm × 140mm</span>
+                            <span class="mx-2">|</span>
+                            <span id="orientationDisplay">横版</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-center">
+                        <div id="bookletPreview" class="booklet-preview">
+                            <div class="booklet-fold"></div>
+                            <div class="absolute inset-0 flex items-center justify-center bg-blue-50">
+                                <div class="text-center p-8">
+                                    <i class="fas fa-box-open text-blue-400 text-5xl mb-4"></i>
+                                    <h3 class="text-2xl font-bold text-blue-600 mb-2">产品宣传手册</h3>
+                                    <p class="text-gray-600">点击左侧模板开始设计</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-6 bg-white rounded-xl shadow-md p-6">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-700">使用说明</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-blue-50 rounded-lg p-4">
+                            <div class="flex items-center mb-2">
+                                <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 mr-2">
+                                    <i class="fas fa-th-large"></i>
+                                </div>
+                                <h3 class="font-medium text-blue-700">选择模板</h3>
+                            </div>
+                            <p class="text-sm text-gray-600">从产品宣传、活动手册等预设模板中选择适合的样式</p>
+                        </div>
+                        <div class="bg-purple-50 rounded-lg p-4">
+                            <div class="flex items-center mb-2">
+                                <div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-500 mr-2">
+                                    <i class="fas fa-undo-alt"></i>
+                                </div>
+                                <h3 class="font-medium text-purple-700">调整方向</h3>
+                            </div>
+                            <p class="text-sm text-gray-600">根据内容需要切换横版或竖版排版方向</p>
+                        </div>
+                        <div class="bg-green-50 rounded-lg p-4">
+                            <div class="flex items-center mb-2">
+                                <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-500 mr-2">
+                                    <i class="fas fa-print"></i>
+                                </div>
+                                <h3 class="font-medium text-green-700">打印输出</h3>
+                            </div>
+                            <p class="text-sm text-gray-600">双面打印后沿中线对折即可完成小册子制作</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="bg-gray-100 py-6 mt-12">
+        <div class="container mx-auto px-4 text-center text-gray-500 text-sm">
+            <p>created by <a href="https://space.coze.cn" class="text-blue-500 hover:text-blue-600">coze space</a></p>
+            <p class="mt-1">页面内容均由 AI 生成，仅供参考</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 方向切换
+            const landscapeBtn = document.getElementById('landscapeBtn');
+            const portraitBtn = document.getElementById('portraitBtn');
+            const bookletPreview = document.getElementById('bookletPreview');
+            const sizeDisplay = document.getElementById('sizeDisplay');
+            const orientationDisplay = document.getElementById('orientationDisplay');
+            
+            landscapeBtn.addEventListener('click', function() {
+                bookletPreview.classList.remove('portrait');
+                landscapeBtn.classList.remove('bg-gray-300', 'text-gray-700');
+                landscapeBtn.classList.add('bg-blue-500', 'text-white');
+                portraitBtn.classList.remove('bg-blue-500', 'text-white');
+                portraitBtn.classList.add('bg-gray-300', 'text-gray-700');
+                sizeDisplay.textContent = '210mm × 140mm';
+                orientationDisplay.textContent = '横版';
+            });
+            
+            portraitBtn.addEventListener('click', function() {
+                bookletPreview.classList.add('portrait');
+                portraitBtn.classList.remove('bg-gray-300', 'text-gray-700');
+                portraitBtn.classList.add('bg-blue-500', 'text-white');
+                landscapeBtn.classList.remove('bg-blue-500', 'text-white');
+                landscapeBtn.classList.add('bg-gray-300', 'text-gray-700');
+                sizeDisplay.textContent = '140mm × 210mm';
+                orientationDisplay.textContent = '竖版';
+            });
+            
+            // 折叠线显示切换
+            const foldToggle = document.getElementById('foldToggle');
+            const bookletFold = document.querySelector('.booklet-fold');
+            
+            foldToggle.addEventListener('change', function() {
+                if(this.checked) {
+                    bookletFold.style.display = 'block';
+                } else {
+                    bookletFold.style.display = 'none';
+                }
+            });
+            
+            // 模板选择
+            const templateItems = document.querySelectorAll('.template-item');
+            
+            templateItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    // 移除所有active类
+                    document.querySelectorAll('.template-thumbnail').forEach(thumb => {
+                        thumb.classList.remove('active');
+                    });
+                    
+                    // 为当前点击项添加active类
+                    const thumbnail = this.querySelector('.template-thumbnail');
+                    thumbnail.classList.add('active');
+                    
+                    // 更新预览内容
+                    const templateType = this.getAttribute('data-template');
+                    updatePreview(templateType);
+                });
+            });
+            
+            function updatePreview(templateType) {
+                const previewContent = bookletPreview.querySelector('div > div');
+                
+                switch(templateType) {
+                    case 'product':
+                        previewContent.innerHTML = `
+                            <div class="text-center p-8">
+                                <i class="fas fa-box-open text-blue-400 text-5xl mb-4"></i>
+                                <h3 class="text-2xl font-bold text-blue-600 mb-2">产品宣传手册</h3>
+                                <p class="text-gray-600">展示您的产品特点和优势</p>
+                            </div>
+                        `;
+                        previewContent.className = 'absolute inset-0 flex items-center justify-center bg-blue-50';
+                        break;
+                    case 'event':
+                        previewContent.innerHTML = `
+                            <div class="text-center p-8">
+                                <i class="fas fa-calendar-alt text-purple-400 text-5xl mb-4"></i>
+                                <h3 class="text-2xl font-bold text-purple-600 mb-2">活动宣传手册</h3>
+                                <p class="text-gray-600">详细介绍您的活动内容和安排</p>
+                            </div>
+                        `;
+                        previewContent.className = 'absolute inset-0 flex items-center justify-center bg-purple-50';
+                        break;
+                    case 'company':
+                        previewContent.innerHTML = `
+                            <div class="text-center p-8">
+                                <i class="fas fa-building text-green-400 text-5xl mb-4"></i>
+                                <h3 class="text-2xl font-bold text-green-600 mb-2">企业介绍手册</h3>
+                                <p class="text-gray-600">展示企业文化和业务范围</p>
+                            </div>
+                        `;
+                        previewContent.className = 'absolute inset-0 flex items-center justify-center bg-green-50';
+                        break;
+                    case 'education':
+                        previewContent.innerHTML = `
+                            <div class="text-center p-8">
+                                <i class="fas fa-graduation-cap text-yellow-400 text-5xl mb-4"></i>
+                                <h3 class="text-2xl font-bold text-yellow-600 mb-2">教育资料手册</h3>
+                                <p class="text-gray-600">整理和呈现教育内容</p>
+                            </div>
+                        `;
+                        previewContent.className = 'absolute inset-0 flex items-center justify-center bg-yellow-50';
+                        break;
+                }
+            }
+            
+            // 打印功能
+            const printBtn = document.getElementById('printBtn');
+            printBtn.addEventListener('click', function() {
+                window.print();
+            });
+            
+            // 初始化折叠线显示状态
+            const toggleSwitch = document.querySelector('.relative input');
+            const toggleDot = document.querySelector('.dot');
+            
+            toggleSwitch.addEventListener('change', function() {
+                if(this.checked) {
+                    toggleDot.style.transform = 'translateX(0)';
+                    toggleDot.classList.remove('bg-gray-400');
+                    toggleDot.classList.add('bg-white');
+                    document.querySelector('.block').classList.remove('bg-gray-300');
+                    document.querySelector('.block').classList.add('bg-blue-500');
+                } else {
+                    toggleDot.style.transform = 'translateX(100%)';
+                    toggleDot.classList.remove('bg-white');
+                    toggleDot.classList.add('bg-gray-400');
+                    document.querySelector('.block').classList.remove('bg-blue-500');
+                    document.querySelector('.block').classList.add('bg-gray-300');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
